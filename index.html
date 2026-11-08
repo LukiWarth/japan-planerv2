@@ -182,6 +182,19 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--acc);outline-off
 .ce{display:flex;gap:6px;margin-top:6px}.ce input,.ce select{flex:1;padding:5px 8px}
 .dsum{margin-top:8px}
 .ghost{position:fixed;z-index:5000;pointer-events:none;transform:translate(-50%,-120%);background:#8a3fc7;color:#fff;border-radius:12px;padding:6px 12px;font-weight:700;font-size:.85rem;box-shadow:0 6px 18px #0006;max-width:70vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#toast-x{}
+.tlz{position:relative;margin-top:8px;border-radius:10px;background:var(--soft)}
+.tlz.ov{outline:2px solid #8a3fc7}
+.hl{position:absolute;left:0;right:0;border-top:1px solid var(--line);font-size:.68rem;color:var(--mut);pointer-events:none}
+.hl span{position:absolute;left:5px;top:1px}
+.tlb{position:absolute;left:46px;right:4px;top:0;bottom:0}
+.tb{position:absolute;border-radius:9px;color:#fff;padding:3px 7px 14px;font-size:.76rem;font-weight:700;touch-action:none;cursor:grab;overflow:hidden;box-shadow:0 2px 7px #0004;line-height:1.25;user-select:none}
+.tb small{display:block;font-weight:500;opacity:.92}
+.tb.tight{outline:2.5px solid #ffd84d}
+.tb.mvg{opacity:.85;z-index:5}
+.tbh{position:absolute;left:0;right:0;bottom:0;height:16px;cursor:ns-resize;touch-action:none;background:linear-gradient(#0000,#0005)}
+.tbh::after{content:"";position:absolute;left:50%;bottom:5px;width:26px;height:3px;border-radius:9px;background:#fffc;transform:translateX(-50%)}
+.tbx{position:absolute;top:2px;right:5px;cursor:pointer;font-size:1rem;line-height:1;padding:2px}
 #toast{position:fixed;left:50%;bottom:92px;transform:translateX(-50%);background:#23284aef;color:#fff;padding:9px 16px;border-radius:99px;font-size:.86rem;z-index:3000;opacity:0;pointer-events:none;transition:opacity .2s;max-width:88vw;text-align:center}
 #toast.on{opacity:1}
 .leaflet-popup-content{margin:12px 14px}
@@ -371,7 +384,8 @@ function drawMap(){
   if(c.hasBase)L.marker([c.base.lat,c.base.lon],{icon:L.divIcon({className:'mkw',html:'<div class="pp hb" style="--c:#8a3fc7">🛏️</div>',iconSize:[28,28],iconAnchor:[14,14]}),interactive:false,keyboard:false,zIndexOffset:800}).addTo(LAYER)}
  if(z>=9||actDay)v.forEach((s,si)=>(s.pl||[]).forEach((x,pi)=>{if(x.lat==null||x.lon==null)return;if(actDay&&(si!==actDay.si||dayOf(s,x)!==actDay.day)&&z<9)return;
   const m=L.marker([x.lat,x.lon],{icon:L.divIcon({className:'mkw',html:'<div class="pp'+(x.ok?' dn':'')+(x===hot?' hb':'')+'" style="--c:'+tg0(s)[2]+'">'+PI(x.ty)+'</div>'+(z>=12?'<span class="mkl" style="top:30px">'+esc(x.n)+'</span>':''),iconSize:[28,28],iconAnchor:[14,14]}),draggable:si===sel&&openS,zIndexOffset:500,title:x.n}).addTo(LAYER);
-  m.on('click',()=>window.openPlace(si,pi));
+  m.on('click',()=>{if(tlDay&&tlDay.si===si&&dayOf(s,x)!==tlDay.day){x.day=tlDay.day;x.ord=1e6;normDay(si,tlDay.day);save();toast('„'+x.n+'“ zu '+dstr(visit(si)[0]+tlDay.day)+' hinzugefügt. Ziehen auf die Zeitachse legt die Uhrzeit fest.');renderPanel();drawMap();return}window.openPlace(si,pi)});
+  const el=m.getElement&&m.getElement();if(el&&tlDay&&tlDay.si===si&&!mobile())el.addEventListener('pointerdown',ev=>{if(ev.button)return;ev.preventDefault();ev.stopPropagation();startDrag(ev,si,pi,PI(x.ty)+' '+x.n,null)});
   m.on('dragend',()=>{const p=m.getLatLng();x.lat=Math.round(p.lat*1e5)/1e5;x.lon=Math.round(p.lng*1e5)/1e5;save();toast('Position von „'+x.n+'“ gespeichert.');drawMap()})}));
  v.forEach((s,i)=>{const t=tg0(s),imgs=(s.imgs||[]).slice(0,4);
   const m=L.marker(ll(s),{icon:L.divIcon({className:'mkw',html:'<div class="mk'+(i===sel?' act':'')+'" style="--c:'+t[2]+'">'+t[0]+'<b>'+(i+1)+'</b></div><span class="mkl">'+esc(s.n)+'</span>',iconSize:[36,36],iconAnchor:[18,18]}),zIndexOffset:i===sel?1000:0,title:s.n}).addTo(LAYER);
@@ -502,6 +516,8 @@ function act(a,el){const s=S.stops[sel],i=+el.dataset.i,d=el.dataset;
  case'pl-open':window.openPlace(+d.si,+d.pi);break;
  case'cal-day':{const e=$('d-'+d.si+'-'+d.day);if(e){e.scrollIntoView({block:'start',behavior:'smooth'});e.classList.add('flash');setTimeout(()=>e.classList.remove('flash'),2100)}break}
  case'cal-map':{const si=+d.si,dy=+d.day;if(actDay&&actDay.si===si&&actDay.day===dy){actDay=null}else{actDay={si,day:dy};sel=si}render();if(actDay&&MAP){const c=chainPts(si,dy),pts=c.pts.map(ll);try{const mob=mobile();if(mob)sheet(0);MAP.fitBounds(pts,{paddingTopLeft:[40,70],paddingBottomRight:[40,(mob?150:0)+40],maxZoom:15})}catch(e){}}break}
+ case'tl-toggle':{const si=+d.si,dy=+d.day;if(tlDay&&tlDay.si===si&&tlDay.day===dy){tlDay=null}else{tlDay={si,day:dy};actDay={si,day:dy};sel=si}render();break}
+ case'tl-un':{const q=S.stops[+d.si].pl[+d.pi];delete q.tm;delete q.dur;reorderByTime(+d.si,q.day);save();render();break}
  case'cal-opt':optimize(+d.si,+d.day);break;
  case'ics':{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([icsText()],{type:'text/calendar'}));a.download='japan-reise.ics';a.click();toast('Kalenderdatei erstellt. Öffnen und in euren Kalender importieren.');break}
  case'share':{const txt=planText()+'\nPlan öffnen: '+shareLink();if(navigator.share)navigator.share({title:S.title,text:txt}).catch(()=>{});else copy(txt,'Plan kopiert, jetzt in WhatsApp einfügen.');break}
@@ -530,7 +546,7 @@ function field(t){const f=t.dataset.f,s=S.stops[sel],i=+t.dataset.i;
  case'title':S.title=t.value;saveSoon();break;
  case'pday':{const x=s.pl[i];if(t.value===''){delete x.day;delete x.ord}else{x.day=+t.value;x.ord=1e6;normDay(sel,x.day)}save();render();break}
  case'ptm':s.pl[i].tm=t.value;saveSoon();break;
- case'ctm':{const q=S.stops[+t.dataset.si].pl[i];q.tm=t.value;saveSoon();break}
+ case'ctm':{const q=S.stops[+t.dataset.si].pl[i];q.tm=t.value;if(typeof q.day==='number')reorderByTime(+t.dataset.si,q.day);saveSoon();break}
  case'cday':{const sx=S.stops[+t.dataset.si],q=sx.pl[i];if(t.value===''){delete q.day;delete q.ord}else{q.day=+t.value;q.ord=1e6;normDay(+t.dataset.si,q.day)}save();render();break}
  case'rt':S.rt=t.checked;save();render();break;
  case'roads':ROADS=t.checked;LS.set('jp2-roads',ROADS?'1':'0');$('zd').className=ROADS?'on':'';drawMap();break;
@@ -546,7 +562,8 @@ $('zs').onclick=()=>{if(!MAP)return;SATON=!SATON;if(SATON){MAP.removeLayer(TL_DE
 $('zd').className=ROADS?'on':'';$('zd').onclick=()=>{ROADS=!ROADS;LS.set('jp2-roads',ROADS?'1':'0');$('zd').className=ROADS?'on':'';toast(ROADS?'Straßenrouten an (Auto, bis 500 km).':'Straßenrouten aus, nur Luftlinie.');drawMap();renderPanel()};
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&placingPl){placingPl=null;$('lmap').style.cursor=''}});
 /* ---------- Plan: Kalender, Tagesplan, Kettenroute ---------- */
-let calEd=null,actDay=null;
+let calEd=null,actDay=null,tlDay=null;
+const PXH=48,z2=n=>('0'+n).slice(-2),t2s=m=>z2(Math.floor(m/60))+':'+z2(m%60),s2t=v=>/^\d\d:\d\d$/.test(v||'')?+v.slice(0,2)*60+ +v.slice(3):null;
 const WD=['So','Mo','Di','Mi','Do','Fr','Sa'];
 const MN=['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
 const dstr=n=>WD[new Date(n*864e5).getUTCDay()]+' '+fD(n);
@@ -563,13 +580,21 @@ function optimize(si,day){const s=S.stops[si],ks=dayItems(si,day),loc=ks.filter(
  if(loc.length<=7){const rec=(cur,left)=>{if(!left.length){const c=cost(cur);if(c<bc){bc=c;best=cur.slice()}return}left.forEach((k,i)=>rec(cur.concat(k),left.filter((_,j)=>j!==i)))};rec([],loc)}
  else{let p=base,left=loc.slice();best=[];while(left.length){let bi=0;left.forEach((k,i)=>{if(dist(p,s.pl[k])<dist(p,s.pl[left[bi]]))bi=i});const k=left.splice(bi,1)[0];best.push(k);p=s.pl[k]}}
  best.concat(rest).forEach((k,j)=>{s.pl[k].ord=j});save();render();toast('Reihenfolge optimiert (kürzeste Strecke).')}
+function reorderByTime(si,day){const s=S.stops[si],ks=dayItems(si,day),tm=ks.filter(k=>s2t(s.pl[k].tm)!==null).sort((a,b)=>s2t(s.pl[a].tm)-s2t(s.pl[b].tm)),un=ks.filter(k=>s2t(s.pl[k].tm)===null);tm.concat(un).forEach((k,j)=>{s.pl[k].ord=j})}
+function tlRange(si,day){const s=S.stops[si];let a=7*60,b=23*60;dayItems(si,day).forEach(k=>{const x=s.pl[k],m=s2t(x.tm);if(m!==null){a=Math.min(a,Math.floor(m/60)*60);b=Math.max(b,Math.ceil((m+(x.dur||60))/60)*60)}});return[a,b]}
+function tlHtml(si,day){const s=S.stops[si],r=tlRange(si,day),H=(r[1]-r[0])/60*PXH,ks=dayItems(si,day).filter(k=>s2t(s.pl[k].tm)!==null).sort((a,b)=>s2t(s.pl[a].tm)-s2t(s.pl[b].tm));
+ const cols=[],pos={};ks.forEach(k=>{const m=s2t(s.pl[k].tm),e=m+(s.pl[k].dur||60);let c=cols.findIndex(en=>en<=m);if(c<0){c=cols.length;cols.push(0)}cols[c]=e;pos[k]=c});const nc=Math.max(1,cols.length),t=tg0(s)[2];
+ let h='<div class="tlz" data-si="'+si+'" data-day="'+day+'" data-t0="'+r[0]+'" style="height:'+H+'px">';for(let m=r[0];m<=r[1];m+=60)h+='<div class="hl" style="top:'+((m-r[0])/60*PXH)+'px"><span>'+t2s(m)+'</span></div>';
+ h+='<div class="tlb">';let prev=null;ks.forEach(k=>{const x=s.pl[k],m=s2t(x.tm),du=x.dur||60;let info='',tight=0;if(prev&&prev.lat!=null&&x.lat!=null){const l=legInfo(prev,x),tr=Math.ceil(l.t*60),gap=m-(s2t(prev.tm)+(prev.dur||60));info=(l.walk?'🚶':'🚗')+' ca. '+tr+' Min. von '+esc(prev.n);if(gap<tr)tight=1}
+  h+='<div class="tb'+(tight?' tight':'')+'" data-si="'+si+'" data-pi="'+k+'" style="top:'+((m-r[0])/60*PXH)+'px;height:'+Math.max(18,du/60*PXH-2)+'px;left:'+(100*pos[k]/nc)+'%;width:'+(100/nc-1)+'%;background:'+t+'"><span class="tbt">'+t2s(m)+'–'+t2s(m+du)+' '+PI(x.ty)+' '+esc(x.n)+'</span>'+(du>=45&&info?'<small>'+(tight?'⚠️ knapp: ':'')+info+'</small>':'')+'<b class="tbx" data-a="tl-un" data-si="'+si+'" data-pi="'+k+'" title="Aus der Zeitachse nehmen">×</b><i class="tbh"></i></div>';prev=x});
+ return h+'</div></div><p class="mut sm" style="margin:4px 0 0">Orte aus der Liste (oder am Rechner direkt von der Karte) auf die Zeitachse ziehen. Block ziehen = verschieben, unteren Rand ziehen = Dauer. Gelber Rand: Weg bis zum nächsten Ort ist länger als die Pause.</p>'}
 function chipHtml(si,k,n,ed){const s=S.stops[si],x=s.pl[k],o=ed===si+':'+k;
- let h='<div class="dc" data-si="'+si+'" data-pi="'+k+'"><div class="dr"><span class="dh" title="Ziehen">⠿</span>'+(n?'<span class="dn">'+n+'</span>':'')+'<span class="dt" data-a="cal-ed" data-si="'+si+'" data-pi="'+k+'">'+PI(x.ty)+' '+esc(x.n)+(x.tm?' <small>'+esc(x.tm)+'</small>':'')+(x.lat==null?' <small title="Keine Position">❔</small>':'')+'</span></div>';
+ let h='<div class="dc" data-si="'+si+'" data-pi="'+k+'"><div class="dr"><span class="dh" title="Ziehen">⠿</span>'+(n?'<span class="dn">'+n+'</span>':'')+'<span class="dt" data-a="cal-ed" data-si="'+si+'" data-pi="'+k+'">'+PI(x.ty)+' '+esc(x.n)+(x.tm?' <small>'+esc(x.tm)+(x.dur?' · '+x.dur+' Min.':'')+'</small>':'')+(x.lat==null?' <small title="Keine Position">❔</small>':'')+'</span></div>';
  if(o){const nn=nd(s),v0=visit(si)[0];h+='<div class="ce"><input type="time" data-f="ctm" data-si="'+si+'" data-i="'+k+'" value="'+esc(x.tm||'')+'"><select data-f="cday" data-si="'+si+'" data-i="'+k+'"><option value="">kein Tag</option>'+Array.from({length:nn},(_,d)=>'<option value="'+d+'"'+(dayOf(s,x)===d?' selected':'')+'>'+dstr(v0+d)+'</option>').join('')+'</select><button class="btn sm2" data-a="pl-open" data-si="'+si+'" data-pi="'+k+'">✏️</button></div>'}
  return h+'</div>'}
-function dayCard(si,day,hl){const s=S.stops[si],v0=visit(si)[0],items=dayItems(si,day),c=chainPts(si,day),st=chainStat(c.pts),on=actDay&&actDay.si===si&&actDay.day===day;
- let h='<div class="day'+(on?' on':'')+'" id="d-'+si+'-'+day+'"><div class="dhd"><b>'+dstr(v0+day)+'</b><span class="mut sm">Tag '+(day+1)+' · '+esc(s.n)+'</span><button class="btn sm2" data-a="cal-map" data-si="'+si+'" data-day="'+day+'" style="margin-left:auto">'+(on?'🗺️ ✓':'🗺️ Karte')+'</button></div>';
- h+='<div class="dz" data-si="'+si+'" data-day="'+day+'">'+(items.length?items.map((k,j)=>chipHtml(si,k,j+1,calEd)).join(''):'<span class="mut sm">Orte hierher ziehen</span>')+'</div>';
+function dayCard(si,day,hl){const s=S.stops[si],v0=visit(si)[0],items=dayItems(si,day),c=chainPts(si,day),st=chainStat(c.pts),on=actDay&&actDay.si===si&&actDay.day===day,tl=tlDay&&tlDay.si===si&&tlDay.day===day;
+ let h='<div class="day'+(on?' on':'')+'" id="d-'+si+'-'+day+'"><div class="dhd"><b>'+dstr(v0+day)+'</b><span class="mut sm">Tag '+(day+1)+' · '+esc(s.n)+'</span><span style="margin-left:auto" class="row"><button class="btn sm2" data-a="tl-toggle" data-si="'+si+'" data-day="'+day+'">'+(tl?'⏱ ✓':'⏱ Zeit')+'</button><button class="btn sm2" data-a="cal-map" data-si="'+si+'" data-day="'+day+'">'+(on?'🗺️ ✓':'🗺️ Karte')+'</button></span></div>';
+ h+='<div class="dz" data-si="'+si+'" data-day="'+day+'">'+(items.length?items.map((k,j)=>chipHtml(si,k,j+1,calEd)).join(''):'<span class="mut sm">Orte hierher ziehen</span>')+'</div>'+(tl?tlHtml(si,day):'');
  if(c.its.length){h+='<div class="dsum sm">'+(c.hasBase?'🛏️ ':'📍 ')+esc(c.base.n)+' → '+c.its.map((x,j)=>(j+1)).join(' → ')+(S.rt!==false?' → zurück':'')+'<br><b>'+(st.km<10?st.km.toFixed(1):Math.round(st.km))+' km · '+ft(st.h)+'</b> <span class="mut">('+(st.walk?'zu Fuß':'Auto, ÖPNV kann abweichen')+')</span><div class="row" style="margin-top:6px"><a class="btn sm2" target="_blank" rel="noopener" href="'+gmChain(c)+'">Google Maps</a>'+(c.its.length>1?'<button class="btn sm2" data-a="cal-opt" data-si="'+si+'" data-day="'+day+'">↻ Beste Reihenfolge</button>':'')+'</div>'+(!c.hasBase?'<div class="mut sm" style="margin-top:4px">Start ist die Stadtmitte. Setzt eine Unterkunft (⭐), dann beginnt die Route dort.</div>':'')+'</div>'}
  return h+'</div>'}
 function calMonths(){const a=pD(S.start),e=a+days()-1,d0=new Date(a*864e5),d1=new Date(e*864e5);let y=d0.getUTCFullYear(),m=d0.getUTCMonth(),h='';
@@ -584,18 +609,25 @@ function vCal(){let h='<h2>📅 Plan</h2>'+calMonths()+'<div class="card"><label
 function icsText(){const L=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Japan Reiseplaner//DE','CALSCALE:GREGORIAN'],z=n=>('0'+n).slice(-2),ymd=n=>{const d=new Date(n*864e5);return d.getUTCFullYear()+z(d.getUTCMonth()+1)+z(d.getUTCDate())},e2=t=>String(t||'').replace(/\\/g,'\\\\').replace(/;/g,'\;').replace(/,/g,'\\,').replace(/\n/g,'\\n');let u=0;
  const ev=(sum,loc,desc,a,b)=>{L.push('BEGIN:VEVENT','UID:jp2-'+Date.now()+'-'+(u++)+'@japan-planer','DTSTAMP:'+ymd(Date.now()/864e5)+'T000000Z','SUMMARY:'+e2(sum));if(loc)L.push('LOCATION:'+e2(loc));if(desc)L.push('DESCRIPTION:'+e2(desc));L.push(a,b,'END:VEVENT')};
  S.stops.forEach((s,i)=>{const v=visit(i);ev('📍 '+s.n,s.n+', Japan','','DTSTART;VALUE=DATE:'+ymd(v[0]),'DTEND;VALUE=DATE:'+ymd(v[1]+1));
-  s.pl.forEach(x=>{const d=dayOf(s,x);if(d===null)return;const n=v[0]+d;let a,b;if(x.tm&&/^\d\d:\d\d$/.test(x.tm)){const m=+x.tm.slice(0,2)*60+ +x.tm.slice(3),m2=Math.min(1439,m+90);a='DTSTART:'+ymd(n)+'T'+z(Math.floor(m/60))+z(m%60)+'00';b='DTEND:'+ymd(n)+'T'+z(Math.floor(m2/60))+z(m2%60)+'00'}else{a='DTSTART;VALUE=DATE:'+ymd(n);b='DTEND;VALUE=DATE:'+ymd(n+1)}
+  s.pl.forEach(x=>{const d=dayOf(s,x);if(d===null)return;const n=v[0]+d;let a,b;if(x.tm&&/^\d\d:\d\d$/.test(x.tm)){const m=+x.tm.slice(0,2)*60+ +x.tm.slice(3),m2=Math.min(1439,m+(x.dur||90));a='DTSTART:'+ymd(n)+'T'+z(Math.floor(m/60))+z(m%60)+'00';b='DTEND:'+ymd(n)+'T'+z(Math.floor(m2/60))+z(m2%60)+'00'}else{a='DTSTART;VALUE=DATE:'+ymd(n);b='DTEND;VALUE=DATE:'+ymd(n+1)}
    ev(PI(x.ty)+' '+x.n,(x.info&&x.info.addr?x.n+', '+x.info.addr:x.n+', '+s.n),x.t,a,b)})});L.push('END:VCALENDAR');return L.join('\r\n')}
 /* Ziehen (Maus und Touch) */
 let DR=null,drT=null;
-function drMove(e){if(!DR)return;DR.x=e.clientX;DR.y=e.clientY;DR.g.style.left=e.clientX+'px';DR.g.style.top=e.clientY+'px';const el=document.elementFromPoint(e.clientX,e.clientY);document.querySelectorAll('.ov,.ovc').forEach(n=>n.classList.remove('ov','ovc'));const z=el&&el.closest('.dz');DR.z=z||null;DR.b=null;if(z){z.classList.add('ov');const c=el.closest('.dc');if(c&&+c.dataset.pi!==DR.pi){DR.b=+c.dataset.pi;c.classList.add('ovc')}}}
+function drMove(e){if(!DR)return;DR.x=e.clientX;DR.y=e.clientY;DR.g.style.left=e.clientX+'px';DR.g.style.top=e.clientY+'px';const el=document.elementFromPoint(e.clientX,e.clientY);document.querySelectorAll('.ov,.ovc').forEach(n=>n.classList.remove('ov','ovc'));const z=el&&el.closest('.dz,.tlz');DR.z=z||null;DR.b=null;if(z){z.classList.add('ov');const c=el.closest('.dc');if(c&&+c.dataset.pi!==DR.pi){DR.b=+c.dataset.pi;c.classList.add('ovc')}}}
 function drUp(){if(!DR)return;window.removeEventListener('pointermove',drMove);window.removeEventListener('pointerup',drUp);window.removeEventListener('pointercancel',drUp);clearInterval(drT);DR.g.remove();document.querySelectorAll('.ov,.ovc,.lift').forEach(n=>n.classList.remove('ov','ovc','lift'));const d=DR;DR=null;if(!d.z)return;
  if(+d.z.dataset.si!==d.si){toast('Dieser Ort gehört zu einem anderen Ziel.');return}const s=S.stops[d.si],x=s.pl[d.pi],day=d.z.dataset.day;
+ if(d.z.classList.contains('tlz')){const r=d.z.getBoundingClientRect(),m=Math.max(0,Math.round(((d.y-r.top)/PXH*60+ +d.z.dataset.t0)/15)*15);x.day=+day;x.tm=t2s(Math.min(m,23*60));x.dur=x.dur||60;reorderByTime(d.si,x.day);save();renderPanel();drawMap();return}
  if(day===''){delete x.day;delete x.ord}else{x.day=+day;x.ord=d.b!=null?((s.pl[d.b].ord||0)-.5):1e6;normDay(d.si,x.day)}save();renderPanel();drawMap()}
-$('pbody').addEventListener('pointerdown',e=>{const h=e.target.closest('.dh');if(!h)return;const c=h.closest('.dc');if(!c)return;e.preventDefault();const g=document.createElement('div');g.className='ghost';g.textContent=c.querySelector('.dt').textContent;document.body.appendChild(g);DR={si:+c.dataset.si,pi:+c.dataset.pi,g,z:null,b:null,x:e.clientX,y:e.clientY};c.classList.add('lift');drMove(e);
+function startDrag(e,si,pi,label,chip){const g=document.createElement('div');g.className='ghost';g.textContent=label;document.body.appendChild(g);DR={si,pi,g,z:null,b:null,x:e.clientX,y:e.clientY,fromMap:!chip,sx:e.clientX,sy:e.clientY};if(chip)chip.classList.add('lift');drMove(e);
  window.addEventListener('pointermove',drMove);window.addEventListener('pointerup',drUp);window.addEventListener('pointercancel',drUp);
- drT=setInterval(()=>{if(!DR)return;const r=$('pbody').getBoundingClientRect();if(DR.y<r.top+56)$('pbody').scrollTop-=12;else if(DR.y>r.bottom-56)$('pbody').scrollTop+=12},30)});
-
+ drT=setInterval(()=>{if(!DR)return;const r=$('pbody').getBoundingClientRect();if(DR.y<r.top+56)$('pbody').scrollTop-=12;else if(DR.y>r.bottom-56)$('pbody').scrollTop+=12},30)}
+$('pbody').addEventListener('pointerdown',e=>{
+ const h=e.target.closest('.dh');if(h){const c=h.closest('.dc');if(!c)return;e.preventDefault();startDrag(e,+c.dataset.si,+c.dataset.pi,c.querySelector('.dt').textContent,c);return}
+ const tb=e.target.closest('.tb');if(tb&&!e.target.closest('.tbx')){e.preventDefault();const si=+tb.dataset.si,pi=+tb.dataset.pi,x=S.stops[si].pl[pi],rs=!!e.target.closest('.tbh'),z=tb.closest('.tlz'),r0=+z.dataset.t0,m0=s2t(x.tm),du0=x.dur||60,y0=e.clientY;let m1=m0,d1=du0,moved=false;tb.classList.add('mvg');
+  const mv=ev=>{const dm=Math.round((ev.clientY-y0)/PXH*60/15)*15;if(Math.abs(ev.clientY-y0)>3)moved=true;if(rs){d1=Math.max(15,du0+dm)}else{m1=Math.max(r0-120,Math.min(24*60-du0,m0+dm))}
+   tb.style.top=((m1-r0)/60*PXH)+'px';tb.style.height=Math.max(18,d1/60*PXH-2)+'px';const tt=tb.querySelector('.tbt');if(tt)tt.textContent=t2s(m1)+'–'+t2s(m1+d1)+' '+PI(x.ty)+' '+x.n};
+  const up=()=>{window.removeEventListener('pointermove',mv);window.removeEventListener('pointerup',up);window.removeEventListener('pointercancel',up);tb.classList.remove('mvg');if(moved){x.tm=t2s(m1);x.dur=d1;reorderByTime(si,x.day);save();renderPanel();drawMap()}};
+  window.addEventListener('pointermove',mv);window.addEventListener('pointerup',up);window.addEventListener('pointercancel',up)}});
 $('dayx').onclick=()=>{actDay=null;drawMap();if($('pbody').querySelector('.day'))renderPanel()};
 /* Start */
 (function(){const m=/[#&]p=([^&]+)/.exec(location.hash);if(m){try{const o=JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(m[1])))));if(o.s&&o.s.stops&&confirm('Geteilten Plan laden? Euer Stand in dieser Variante wird ersetzt.')){RG=PRE[o.rg]?o.rg:RG;LS.set('jp2-rg',RG);S=mig(o.s);save()}}catch(e){}history.replaceState(null,'',location.pathname)}})();
